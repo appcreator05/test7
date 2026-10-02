@@ -17,6 +17,7 @@ import {
   Maximize,
   Sliders,
   ChevronDown,
+  Settings,
   Mic,
   MicOff
 } from 'lucide-react';
@@ -400,6 +401,10 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
   const [isAutoNext, setIsAutoNext] = useState<boolean>(true);
   const [showControls, setShowControls] = useState<boolean>(true);
   const [showGearHideBtn, setShowGearHideBtn] = useState<boolean>(false);
+  const [selectedQuality, setSelectedQuality] = useState<string>('auto');
+  const [showQualityMenu, setShowQualityMenu] = useState<boolean>(false);
+  const [isGearInteracting, setIsGearInteracting] = useState<boolean>(false);
+  const gearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastPointerPosRef = useRef<{ x: number; y: number; width: number; height: number }>({ x: 0, y: 0, width: 0, height: 0 });
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -408,14 +413,41 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
 
   useEffect(() => {
     setShowGearHideBtn(false);
+    setShowQualityMenu(false);
+    setIsGearInteracting(false);
   }, [selectedVideo?.id]);
+
+  const setVideoQuality = (quality: string) => {
+    setSelectedQuality(quality);
+    setShowQualityMenu(false);
+    const iframe = document.getElementById('youtube-player-frame') as HTMLIFrameElement;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: 'command',
+          func: 'setPlaybackQuality',
+          args: [quality],
+        }),
+        '*'
+      );
+      iframe.contentWindow.postMessage(
+        JSON.stringify({
+          event: 'command',
+          func: 'setPlaybackQualityRange',
+          args: [quality],
+        }),
+        '*'
+      );
+    }
+    resetControlsTimer();
+  };
 
   useEffect(() => {
     const handleWindowBlur = () => {
       const pos = lastPointerPosRef.current;
-      if (pos.width > 0 && pos.x >= pos.width - 140 && pos.y <= 65) {
+      if (pos.width > 0 && pos.x >= pos.width - 160 && pos.y <= 75) {
         setShowGearHideBtn(true);
-        setShowControls(true);
+        setIsGearInteracting(true);
       }
     };
     window.addEventListener('blur', handleWindowBlur);
@@ -459,9 +491,38 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
     }, 5000);
   };
 
-  const handleScreenTap = () => {
+  const handleScreenTap = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      let clientX = 0;
+      let clientY = 0;
+      if ('clientX' in e) {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      } else if ('touches' in e && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      }
+      const stage = document.getElementById('cinema-player-box');
+      if (stage && clientX && clientY) {
+        const rect = stage.getBoundingClientRect();
+        const relX = clientX - rect.left;
+        const relY = clientY - rect.top;
+        // If clicked in the top-right Gear / Settings zone (width 160px, height 75px):
+        if (relX >= rect.width - 160 && relY <= 75) {
+          setIsGearInteracting(true);
+          setShowGearHideBtn(true);
+          if (gearTimeoutRef.current) clearTimeout(gearTimeoutRef.current);
+          gearTimeoutRef.current = setTimeout(() => {
+            setIsGearInteracting(false);
+          }, 12000);
+          return; // Let YouTube receive the click on its gear icon!
+        }
+      }
+      e.stopPropagation();
+    }
     if (showControls) {
       setShowControls(false);
+      setShowQualityMenu(false);
       if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
     } else {
       resetControlsTimer();
@@ -1310,9 +1371,9 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                   }}
                 />
 
-                {/* UNTOUCH SHIELD 1: TOP-LEFT AREA (Channel Avatar, Video Title, Channel Name, Speaker Icon - Leaving CC & Gear open) */}
+                {/* UNTOUCH SHIELD 1: TOP-LEFT AREA (Channel Avatar, Video Title, Channel Name, Speaker Icon - Leaving Gear & Settings open) */}
                 <div
-                  className="absolute top-0 left-0 w-[calc(100%-96px)] h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                  className="absolute top-0 left-0 w-[calc(100%-160px)] h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
                   title="Video Player Tap Area"
                   onClick={handleScreenTap}
                   onTouchStart={handleScreenTap}
@@ -1330,11 +1391,11 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                 <div
                   id="player-screen-tap-overlay"
                   className={`absolute inset-0 z-20 cursor-pointer select-none bg-transparent ${
-                    showControls ? 'bottom-20 sm:bottom-24' : 'bottom-0'
-                  }`}
+                    isGearInteracting ? 'pointer-events-none' : 'pointer-events-auto'
+                  } ${showControls ? 'bottom-20 sm:bottom-24' : 'bottom-0'}`}
                   style={{
-                    clipPath: 'polygon(0 0, calc(100% - 96px) 0, calc(100% - 96px) 48px, 100% 48px, 100% 100%, 0 100%)',
-                    WebkitClipPath: 'polygon(0 0, calc(100% - 96px) 0, calc(100% - 96px) 48px, 100% 48px, 100% 100%, 0 100%)',
+                    clipPath: 'polygon(0 0, calc(100% - 160px) 0, calc(100% - 160px) 75px, 100% 75px, 100% 100%, 0 100%)',
+                    WebkitClipPath: 'polygon(0 0, calc(100% - 160px) 0, calc(100% - 160px) 75px, 100% 75px, 100% 100%, 0 100%)',
                   }}
                   onClick={handleScreenTap}
                   onTouchStart={handleScreenTap}
@@ -1521,19 +1582,6 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                     </div>
                   </div>
                 </div>
-
-                {/* Floating Exit Button during Fullscreen Mode */}
-                {isPlayerFullscreen && (
-                  <button
-                    type="button"
-                    onClick={togglePlayerFullscreen}
-                    className="absolute top-4 right-4 z-50 bg-black/85 hover:bg-black text-white border border-white/20 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-xl transition-all cursor-pointer text-xs font-semibold backdrop-blur-md"
-                    title="Exit Fullscreen / Return to Portrait"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Portrait</span>
-                  </button>
-                )}
                 </div>
               </div>
 
