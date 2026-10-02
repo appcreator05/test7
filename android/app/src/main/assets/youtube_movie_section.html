@@ -683,21 +683,82 @@
       font-weight: 700;
       background: rgba(239, 68, 68, 0.12);
     }
-    .mini-restore-controls-btn {
+    .cinema-frame-box.in-gear-mode .untouch-shield-top-left,
+    .cinema-frame-box.in-gear-mode .untouch-shield-bottom,
+    .cinema-frame-box.in-gear-mode .screen-tap-overlay,
+    .cinema-frame-box.in-gear-mode .video-bottom-controls,
+    .cinema-frame-box.in-gear-mode .mini-restore-controls-btn {
       display: none !important;
+      pointer-events: none !important;
     }
 
-    .ytSpecBottomSheetLayoutContainer {
-      border-radius: 12px;
-      background-color: #fff;
-      display: block;
-      overflow: hidden;
-      position: fixed;
-      margin: 0 8px 90px;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
+    .mini-restore-controls-btn {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 25;
+      display: none;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 9999px;
+      padding: 5px 12px;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      user-select: none;
+      -webkit-user-select: none;
+      transition: transform 0.15s, background 0.15s;
+    }
+    .mini-restore-controls-btn:active {
+      transform: scale(0.95);
+      background: rgba(30, 30, 30, 0.95);
+    }
+    .cinema-frame-box.controls-hidden:not(.in-gear-mode) .mini-restore-controls-btn {
+      display: inline-flex;
+    }
+
+    .quality-mode-banner {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 60;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.92);
+      border: 1px solid rgba(245, 158, 11, 0.8);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.9);
+      border-radius: 9999px;
+      padding: 6px 14px;
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 700;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .quality-mode-banner .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      animation: pulse 1s infinite;
+    }
+    .quality-mode-banner .done-btn {
+      background: #dc2626;
+      color: #ffffff;
+      border: none;
+      border-radius: 9999px;
+      padding: 3px 10px;
+      font-size: 10.5px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-left: 4px;
     }
 
     .video-bottom-controls {
@@ -1657,6 +1718,19 @@
           <!-- Screen Tap Overlay: Touching video player immediately brings up the controls layout! -->
           <div class="screen-tap-overlay" id="screenTapOverlay" onclick="handleScreenTap(event)" ontouchstart="handleScreenTap(event)" title="Tap to toggle controls"></div>
 
+          <!-- Quality Mode Floating Banner (Shows when user is changing quality/settings so controls don't overlap) -->
+          <div class="quality-mode-banner" id="qualityModeBanner">
+            <span class="dot"></span>
+            <span>Quality Mode Active</span>
+            <button type="button" class="done-btn" onclick="exitGearInteraction(event)">Done</button>
+          </div>
+
+          <!-- Mini restore controls button (Shows when controls are hidden and not in quality mode) -->
+          <button type="button" class="mini-restore-controls-btn" id="miniRestoreControlsBtn" onclick="restoreControls(event)" title="Show Controls">
+            <span style="color:#ef4444;font-size:10px;">▶</span>
+            <span>Controls</span>
+          </button>
+
           <!-- Slide-up Bottom Control Layout -->
           <div class="video-bottom-controls" id="videoBottomControls">
             <div class="video-controls-bar">
@@ -1703,10 +1777,6 @@
               <div class="controls-right">
                 <button type="button" class="ctrl-btn" style="background:#1e293b;border-color:rgba(56,189,248,0.3);color:#38bdf8;" onclick="toggleLandscapeOrientation(event)" title="Toggle Fullscreen">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;display:inline-block;" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>
-                </button>
-
-                <button type="button" class="ctrl-btn" id="gearHideControlsBtn" style="display:none;background:#222222;border-color:#3d3d3d;color:#cbd5e1;padding:6px 9px;" onclick="hideControlsBar(event)" title="Hide Controls Bar">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
                 </button>
               </div>
               </div>
@@ -2319,36 +2389,106 @@
       resetControlsTimer();
     }
 
+    function checkGearTap(clientX, clientY) {
+      const stage = document.getElementById('cinemaStage') || document.getElementById('cinemaFrameBox');
+      if (!stage) return;
+      const rect = stage.getBoundingClientRect();
+      const relX = clientX - rect.left;
+      const relY = clientY - rect.top;
+      // Top-right 200px by 100px area of the player contains YouTube's native Gear/Settings icon
+      if (relX >= rect.width - 200 && relX <= rect.width + 15 && relY >= -15 && relY <= 100) {
+        enableGearInteraction();
+      }
+    }
+
+    // Called directly from native Android WebView onTouchListener
+    window.handleNativeTouchCoord = function(clientX, clientY) {
+      checkGearTap(clientX, clientY);
+    };
+
+    // Global capture listeners ensure every tap across viewport is checked before iframe consumes it
+    window.addEventListener('touchstart', function(e) {
+      if (e.touches && e.touches[0]) {
+        checkGearTap(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { capture: true, passive: true });
+
+    window.addEventListener('pointerdown', function(e) {
+      checkGearTap(e.clientX, e.clientY);
+    }, { capture: true, passive: true });
+
     function enableGearInteraction() {
+      window.isGearInteractingActive = true;
       const overlay = document.getElementById('screenTapOverlay');
       const untouchTop = document.getElementById('untouchTopLeft');
       const untouchBottom = document.getElementById('untouchBottom');
       const controls = document.getElementById('videoBottomControls');
       const box = document.getElementById('cinemaFrameBox');
+      const banner = document.getElementById('qualityModeBanner');
+
+      if (box) {
+        box.classList.add('in-gear-mode');
+        box.classList.add('controls-hidden');
+      }
 
       // 1. Immediately hide our controls bar so it NEVER covers YouTube's bottom sheet!
       if (controls) controls.classList.add('is-hidden');
-      if (box) box.classList.add('controls-hidden');
       if (controlsTimer) clearTimeout(controlsTimer);
 
-      // 2. Disable all shields & overlays so touches on YouTube's Quality bottom sheet work unimpeded!
-      if (overlay) overlay.style.pointerEvents = 'none';
-      if (untouchTop) untouchTop.style.pointerEvents = 'none';
-      if (untouchBottom) untouchBottom.style.pointerEvents = 'none';
-
-      window.isGearInteractingActive = true;
+      // 2. Hide all shields & overlays so touches on YouTube's Quality bottom sheet work unimpeded!
+      if (overlay) overlay.style.display = 'none';
+      if (untouchTop) untouchTop.style.display = 'none';
+      if (untouchBottom) untouchBottom.style.display = 'none';
+      if (banner) banner.style.display = 'inline-flex';
 
       if (window.gearInteractionTimeout) clearTimeout(window.gearInteractionTimeout);
       window.gearInteractionTimeout = setTimeout(() => {
-        window.isGearInteractingActive = false;
-        if (overlay) overlay.style.pointerEvents = 'auto';
-        if (untouchTop) untouchTop.style.pointerEvents = 'auto';
-        if (untouchBottom) untouchBottom.style.pointerEvents = 'auto';
-      }, 15000);
+        exitGearInteraction();
+      }, 35000);
+    }
+
+    function exitGearInteraction(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      window.isGearInteractingActive = false;
+      const overlay = document.getElementById('screenTapOverlay');
+      const untouchTop = document.getElementById('untouchTopLeft');
+      const untouchBottom = document.getElementById('untouchBottom');
+      const banner = document.getElementById('qualityModeBanner');
+      const box = document.getElementById('cinemaFrameBox');
+
+      if (box) {
+        box.classList.remove('in-gear-mode');
+      }
+      if (overlay) overlay.style.display = 'block';
+      if (untouchTop) untouchTop.style.display = 'block';
+      if (untouchBottom) untouchBottom.style.display = 'block';
+      if (banner) banner.style.display = 'none';
+
+      resetControlsTimer();
+    }
+
+    function restoreControls(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const controls = document.getElementById('videoBottomControls');
+      const box = document.getElementById('cinemaFrameBox');
+      if (controls) controls.classList.remove('is-hidden');
+      if (box) box.classList.remove('controls-hidden');
+      resetControlsTimer();
     }
 
     function handleScreenTap(e) {
-      // Check if tap was in the top-right Gear / Settings area (within 160px from right, 75px from top)
+      // In Quality Mode, let YouTube handle ALL touches with zero interference!
+      if (window.isGearInteractingActive) {
+        return;
+      }
+
+      // Check if tap was in the top-right Gear / Settings area
       const stage = document.getElementById('cinemaStage') || document.getElementById('cinemaFrameBox');
       if (stage && e) {
         const rect = stage.getBoundingClientRect();
@@ -2357,23 +2497,11 @@
         if (clientX && clientY) {
           const relX = clientX - rect.left;
           const relY = clientY - rect.top;
-          if (relX >= rect.width - 160 && relY <= 75) {
+          if (relX >= rect.width - 200 && relY <= 100) {
             enableGearInteraction();
             return; // Let YouTube native gear settings open!
           }
         }
-      }
-
-      if (window.isGearInteractingActive) {
-        window.isGearInteractingActive = false;
-        const overlay = document.getElementById('screenTapOverlay');
-        const untouchTop = document.getElementById('untouchTopLeft');
-        const untouchBottom = document.getElementById('untouchBottom');
-        if (overlay) overlay.style.pointerEvents = 'auto';
-        if (untouchTop) untouchTop.style.pointerEvents = 'auto';
-        if (untouchBottom) untouchBottom.style.pointerEvents = 'auto';
-        resetControlsTimer();
-        return;
       }
 
       if (e) {
@@ -2397,6 +2525,7 @@
     }
 
     function resetControlsTimer(e) {
+      if (window.isGearInteractingActive) return; // Do NOT unhide controls while in Quality Mode!
       if (e) e.stopPropagation();
       const controls = document.getElementById('videoBottomControls');
       const box = document.getElementById('cinemaFrameBox');
@@ -2437,18 +2566,20 @@
     }
 
     function handleStagePointerDown(e) {
+      if (window.isGearInteractingActive) return;
       const stage = document.getElementById('cinemaStage');
       if (!stage) return;
       const rect = stage.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       lastStagePointer = { x, y, width: rect.width, height: rect.height };
-      if (x >= rect.width - 160 && y <= 75) {
+      if (x >= rect.width - 200 && y <= 100) {
         enableGearInteraction();
       }
     }
 
     function handleStageTouchStart(e) {
+      if (window.isGearInteractingActive) return;
       if (!e.touches || !e.touches[0]) return;
       const stage = document.getElementById('cinemaStage');
       if (!stage) return;
@@ -2457,7 +2588,7 @@
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
       lastStagePointer = { x, y, width: rect.width, height: rect.height };
-      if (x >= rect.width - 160 && y <= 75) {
+      if (x >= rect.width - 200 && y <= 100) {
         enableGearInteraction();
       }
     }
@@ -2468,7 +2599,7 @@
     }
 
     window.addEventListener('blur', function() {
-      if (lastStagePointer.width > 0 && lastStagePointer.x >= lastStagePointer.width - 160 && lastStagePointer.y <= 75) {
+      if (lastStagePointer.width > 0 && lastStagePointer.x >= lastStagePointer.width - 200 && lastStagePointer.y <= 100) {
         enableGearInteraction();
       }
     });
@@ -2479,6 +2610,7 @@
       if (!el) return;
       ['click', 'touchstart', 'touchend', 'mousedown', 'mouseup', 'contextmenu'].forEach(function(evt) {
         el.addEventListener(evt, function(e) {
+          if (window.isGearInteractingActive) return;
           e.preventDefault();
           e.stopPropagation();
         }, { passive: false });

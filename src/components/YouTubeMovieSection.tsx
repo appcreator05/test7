@@ -459,17 +459,51 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
   };
 
   useEffect(() => {
+    const checkGearTap = (clientX: number, clientY: number) => {
+      const stage = document.getElementById('cinema-player-box');
+      if (!stage) return;
+      const rect = stage.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      if (x >= rect.width - 200 && x <= rect.width + 15 && y >= -15 && y <= 100) {
+        setIsGearInteracting(true);
+        setShowControls(false);
+        setShowQualityMenu(false);
+        if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+        if (gearTimeoutRef.current) clearTimeout(gearTimeoutRef.current);
+        gearTimeoutRef.current = setTimeout(() => {
+          setIsGearInteracting(false);
+        }, 35000);
+      }
+    };
+
+    const handleGlobalTouch = (e: TouchEvent) => {
+      if (e.touches && e.touches[0]) {
+        checkGearTap(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    const handleGlobalPointer = (e: PointerEvent) => {
+      checkGearTap(e.clientX, e.clientY);
+    };
+
     const handleWindowBlur = () => {
       const pos = lastPointerPosRef.current;
-      if (pos.width > 0 && pos.x >= pos.width - 160 && pos.y <= 75) {
+      if (pos.width > 0 && pos.x >= pos.width - 200 && pos.y <= 100) {
         setIsGearInteracting(true);
         setShowControls(false);
         setShowQualityMenu(false);
         if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
       }
     };
+
+    window.addEventListener('touchstart', handleGlobalTouch, { capture: true, passive: true });
+    window.addEventListener('pointerdown', handleGlobalPointer, { capture: true, passive: true });
     window.addEventListener('blur', handleWindowBlur);
+
     return () => {
+      window.removeEventListener('touchstart', handleGlobalTouch, { capture: true } as any);
+      window.removeEventListener('pointerdown', handleGlobalPointer, { capture: true } as any);
       window.removeEventListener('blur', handleWindowBlur);
     };
   }, []);

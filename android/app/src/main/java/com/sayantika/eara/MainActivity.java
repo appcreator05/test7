@@ -607,6 +607,22 @@ public class MainActivity extends AppCompatActivity {
             ws.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
 
+        youtubeWebView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                final float x = event.getX();
+                final float y = event.getY();
+                v.post(() -> {
+                    if (youtubeWebView != null) {
+                        youtubeWebView.evaluateJavascript(
+                            "if (typeof handleNativeTouchCoord === 'function') { handleNativeTouchCoord(" + x + ", " + y + "); }",
+                            null
+                        );
+                    }
+                });
+            }
+            return false;
+        });
+
         youtubeWebView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
