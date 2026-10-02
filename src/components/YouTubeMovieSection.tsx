@@ -19,8 +19,18 @@ import {
   ChevronDown,
   Settings,
   Mic,
-  MicOff
+  MicOff,
+  Check
 } from 'lucide-react';
+
+export const QUALITY_OPTIONS = [
+  { id: 'hd1080', label: '1080p HD', desc: 'Highest definition' },
+  { id: 'hd720', label: '720p HD', desc: 'High definition' },
+  { id: 'large', label: '480p', desc: 'Standard definition' },
+  { id: 'medium', label: '360p', desc: 'Data saver' },
+  { id: 'small', label: '240p', desc: 'Low bandwidth' },
+  { id: 'auto', label: 'Auto', desc: 'Auto adjustment' },
+];
 
 export interface RealYouTubeVideo {
   id: string;
@@ -403,6 +413,7 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
   const [showGearHideBtn, setShowGearHideBtn] = useState<boolean>(false);
   const [selectedQuality, setSelectedQuality] = useState<string>('auto');
   const [showQualityMenu, setShowQualityMenu] = useState<boolean>(false);
+  const [qualityToast, setQualityToast] = useState<string | null>(null);
   const [isGearInteracting, setIsGearInteracting] = useState<boolean>(false);
   const gearTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastPointerPosRef = useRef<{ x: number; y: number; width: number; height: number }>({ x: 0, y: 0, width: 0, height: 0 });
@@ -415,11 +426,16 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
     setShowGearHideBtn(false);
     setShowQualityMenu(false);
     setIsGearInteracting(false);
+    setQualityToast(null);
   }, [selectedVideo?.id]);
 
   const setVideoQuality = (quality: string) => {
     setSelectedQuality(quality);
     setShowQualityMenu(false);
+    const label = quality === 'auto' ? 'Auto' : `${quality.replace('hd', '')}p`;
+    setQualityToast(`Quality set to ${label}`);
+    setTimeout(() => setQualityToast(null), 3500);
+
     const iframe = document.getElementById('youtube-player-frame') as HTMLIFrameElement;
     if (iframe?.contentWindow) {
       iframe.contentWindow.postMessage(
@@ -448,6 +464,7 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
       if (pos.width > 0 && pos.x >= pos.width - 160 && pos.y <= 75) {
         setIsGearInteracting(true);
         setShowControls(false);
+        setShowQualityMenu(false);
         if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
       }
     };
@@ -483,6 +500,7 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
   };
 
   const resetControlsTimer = () => {
+    if (isGearInteracting) return;
     setShowControls(true);
     if (controlsTimerRef.current) {
       clearTimeout(controlsTimerRef.current);
@@ -493,6 +511,11 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
   };
 
   const handleScreenTap = (e?: React.MouseEvent | React.TouchEvent) => {
+    // When in Quality Mode, let YouTube handle all touches with zero layout interference
+    if (isGearInteracting) {
+      return;
+    }
+
     if (e) {
       let clientX = 0;
       let clientY = 0;
@@ -512,22 +535,18 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
         if (relX >= rect.width - 160 && relY <= 75) {
           setIsGearInteracting(true);
           setShowControls(false);
+          setShowQualityMenu(false);
           if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
           if (gearTimeoutRef.current) clearTimeout(gearTimeoutRef.current);
           gearTimeoutRef.current = setTimeout(() => {
             setIsGearInteracting(false);
-          }, 15000);
-          return; // Let YouTube receive the click on its gear icon!
+          }, 35000);
+          return; // Let YouTube receive the click on its gear icon without any overlay!
         }
       }
       e.stopPropagation();
     }
-    if (isGearInteracting) {
-      setIsGearInteracting(false);
-      setShowControls(true);
-      resetControlsTimer();
-      return;
-    }
+
     if (showControls) {
       setShowControls(false);
       setShowQualityMenu(false);
@@ -1341,7 +1360,12 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                     if (x >= rect.width - 160 && y <= 75) {
                       setIsGearInteracting(true);
                       setShowControls(false);
+                      setShowQualityMenu(false);
                       if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+                      if (gearTimeoutRef.current) clearTimeout(gearTimeoutRef.current);
+                      gearTimeoutRef.current = setTimeout(() => {
+                        setIsGearInteracting(false);
+                      }, 35000);
                     }
                   }}
                   onTouchStartCapture={(e) => {
@@ -1359,7 +1383,12 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                       if (x >= rect.width - 160 && y <= 75) {
                         setIsGearInteracting(true);
                         setShowControls(false);
+                        setShowQualityMenu(false);
                         if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
+                        if (gearTimeoutRef.current) clearTimeout(gearTimeoutRef.current);
+                        gearTimeoutRef.current = setTimeout(() => {
+                          setIsGearInteracting(false);
+                        }, 35000);
                       }
                     }
                   }}
@@ -1383,45 +1412,88 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                   }}
                 />
 
-                {/* UNTOUCH SHIELD 1: TOP-LEFT AREA (Channel Avatar, Video Title, Channel Name, Speaker Icon - Leaving Gear & Settings open) */}
-                <div
-                  className={`absolute top-0 left-0 w-[calc(100%-160px)] h-12 sm:h-14 z-20 ${
-                    isGearInteracting ? 'pointer-events-none' : 'pointer-events-auto'
-                  } cursor-pointer select-none bg-transparent`}
-                  title="Video Player Tap Area"
-                  onClick={handleScreenTap}
-                  onTouchStart={handleScreenTap}
-                />
+                {/* UNTOUCH SHIELD 1: TOP-LEFT AREA (Leaving Gear & Settings open) - Disabled during Quality Mode */}
+                {!isGearInteracting && (
+                  <div
+                    className="absolute top-0 left-0 w-[calc(100%-160px)] h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                    title="Video Player Tap Area"
+                    onClick={handleScreenTap}
+                    onTouchStart={handleScreenTap}
+                  />
+                )}
 
-                {/* UNTOUCH SHIELD 2: BOTTOM AREA (Share/Link Icon, Recommendations Card, YouTube Logo) */}
-                <div
-                  className={`absolute bottom-0 left-0 right-0 h-12 sm:h-14 z-20 ${
-                    isGearInteracting ? 'pointer-events-none' : 'pointer-events-auto'
-                  } cursor-pointer select-none bg-transparent`}
-                  title="Video Player Tap Area"
-                  onClick={handleScreenTap}
-                  onTouchStart={handleScreenTap}
-                />
+                {/* UNTOUCH SHIELD 2: BOTTOM AREA - Completely removed during Quality Mode so YouTube bottom sheet is 100% clickable */}
+                {!isGearInteracting && (
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                    title="Video Player Tap Area"
+                    onClick={handleScreenTap}
+                    onTouchStart={handleScreenTap}
+                  />
+                )}
 
-                {/* FULL SCREEN TAP INTERCEPTOR: Touching video player immediately brings up the controls layout! */}
-                <div
-                  id="player-screen-tap-overlay"
-                  className={`absolute inset-0 z-20 cursor-pointer select-none bg-transparent ${
-                    isGearInteracting ? 'pointer-events-none' : 'pointer-events-auto'
-                  } ${showControls ? 'bottom-20 sm:bottom-24' : 'bottom-0'}`}
-                  style={{
-                    clipPath: 'polygon(0 0, calc(100% - 160px) 0, calc(100% - 160px) 75px, 100% 75px, 100% 100%, 0 100%)',
-                    WebkitClipPath: 'polygon(0 0, calc(100% - 160px) 0, calc(100% - 160px) 75px, 100% 75px, 100% 100%, 0 100%)',
-                  }}
-                  onClick={handleScreenTap}
-                  onTouchStart={handleScreenTap}
-                  title="Tap to toggle controls"
-                />
+                {/* FULL SCREEN TAP INTERCEPTOR: Disabled during Quality Mode so YouTube menus receive clicks */}
+                {!isGearInteracting && (
+                  <div
+                    id="player-screen-tap-overlay"
+                    className={`absolute inset-0 z-20 cursor-pointer select-none bg-transparent pointer-events-auto ${showControls ? 'bottom-20 sm:bottom-24' : 'bottom-0'}`}
+                    style={{
+                      clipPath: 'polygon(0 0, calc(100% - 160px) 0, calc(100% - 160px) 75px, 100% 75px, 100% 100%, 0 100%)',
+                      WebkitClipPath: 'polygon(0 0, calc(100% - 160px) 0, calc(100% - 160px) 75px, 100% 75px, 100% 100%, 0 100%)',
+                    }}
+                    onClick={handleScreenTap}
+                    onTouchStart={handleScreenTap}
+                    title="Tap to toggle controls"
+                  />
+                )}
 
-                {/* SLIDE-UP BOTTOM CONTROL LAYOUT: Play/Pause, Auto Next, and Landscape Fullscreen button */}
+                {/* QUALITY MODE FLOATING BANNER: Shows when user is changing quality or speed */}
+                {isGearInteracting && (
+                  <div className="absolute top-2 left-2 z-50 flex items-center gap-2 bg-black/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-amber-500/70 shadow-2xl text-xs text-white animate-in fade-in slide-in-from-top-1 select-none">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="font-semibold text-slate-100">Quality Mode Active</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGearInteracting(false);
+                        setShowControls(true);
+                        resetControlsTimer();
+                      }}
+                      className="ml-1 px-2.5 py-0.5 bg-red-600 hover:bg-red-700 active:scale-95 text-white font-bold rounded-full text-[11px] transition-all cursor-pointer shadow-sm"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
+
+                {/* Video Quality Toast Notification */}
+                {qualityToast && (
+                  <div className="absolute top-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-[#1f2937]/95 border border-emerald-500/50 backdrop-blur-md px-4 py-2 rounded-full shadow-2xl text-xs font-bold text-white animate-in fade-in zoom-in-95 pointer-events-none">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span>{qualityToast}</span>
+                  </div>
+                )}
+
+                {/* Mini Show Controls Pill when controls are hidden */}
+                {!showControls && !isGearInteracting && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowControls(true);
+                      resetControlsTimer();
+                    }}
+                    className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 px-3 py-1 bg-black/80 hover:bg-black/95 text-slate-200 hover:text-white rounded-full text-[11px] font-semibold border border-white/20 backdrop-blur-md transition-all shadow-lg cursor-pointer active:scale-95"
+                    title="Show Player Controls"
+                  >
+                    <Play className="w-3 h-3 text-red-500 fill-red-500" />
+                    <span>Controls</span>
+                  </button>
+                )}
+
+                {/* SLIDE-UP BOTTOM CONTROL LAYOUT: Play/Pause, Auto Next, Quality, Fullscreen, and Hide button */}
                 <div
                   className={`absolute bottom-0 left-0 right-0 z-30 transition-all duration-300 ease-out transform ${
-                    showControls
+                    showControls && !isGearInteracting
                       ? 'translate-y-0 opacity-100 pointer-events-auto'
                       : 'translate-y-full opacity-0 pointer-events-none'
                   }`}
@@ -1547,7 +1619,7 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                         </button>
                       </div>
 
-                      {/* Right: Fullscreen icon only (without Landscape text) */}
+                      {/* Right: Fullscreen Button */}
                       <div className="flex items-center shrink-0">
                         <button
                           type="button"
@@ -1558,42 +1630,8 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                           className="flex items-center justify-center p-2 sm:px-2.5 sm:py-2 bg-[#1e293b] hover:bg-[#334155] active:scale-95 text-sky-400 font-bold rounded-full border border-sky-500/30 transition-all cursor-pointer shadow-sm shrink-0"
                           title={isPlayerFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="lucide lucide-maximize w-4 h-4"
-                            aria-hidden="true"
-                          >
-                            <path d="M8 3H5a2 2 0 0 0-2 2v3"></path>
-                            <path d="M21 8V5a2 2 0 0 0-2-2h-3"></path>
-                            <path d="M3 16v3a2 2 0 0 0 2 2h3"></path>
-                            <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
-                          </svg>
+                          <Maximize className="w-4 h-4" />
                         </button>
-
-                        {showGearHideBtn && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowControls(false);
-                              setShowGearHideBtn(false);
-                            }}
-                            className="flex items-center justify-center p-2 sm:px-2.5 sm:py-2 bg-[#222222] hover:bg-[#333333] active:scale-95 text-slate-300 hover:text-white font-bold rounded-full border border-[#3d3d3d] transition-all cursor-pointer shadow-sm shrink-0 animate-in fade-in zoom-in-95 duration-200"
-                            title="Hide Controls Bar"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down w-4 h-4" aria-hidden="true">
-                              <path d="m6 9 6 6 6-6"></path>
-                            </svg>
-                          </button>
-                        )}
                       </div>
                     </div>
                   </div>
