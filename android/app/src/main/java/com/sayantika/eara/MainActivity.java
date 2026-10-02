@@ -318,70 +318,26 @@ public class MainActivity extends AppCompatActivity {
      */
     private void setupSplashScreen() {
         splashOverlay = new FrameLayout(this);
-        splashOverlay.setBackgroundColor(0xFF0F172A);
+        splashOverlay.setBackgroundColor(Color.BLACK);
         RelativeLayout.LayoutParams splashParams = new RelativeLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
         );
         splashOverlay.setLayoutParams(splashParams);
 
-        LinearLayout splashContent = new LinearLayout(this);
-        splashContent.setOrientation(LinearLayout.VERTICAL);
-        splashContent.setGravity(Gravity.CENTER);
-        FrameLayout.LayoutParams contentParams = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER
-        );
-        splashContent.setLayoutParams(contentParams);
+        // Fullscreen Cinematic Splash Image
+        ImageView splashBg = new ImageView(this);
+        splashBg.setImageResource(R.drawable.splash);
+        splashBg.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        splashOverlay.addView(splashBg, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+        ));
 
-        // App Icon
-        ImageView splashIcon = new ImageView(this);
-        splashIcon.setImageResource(R.mipmap.ic_launcher);
-        int iconSize = (int) (96 * getResources().getDisplayMetrics().density);
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(iconSize, iconSize);
-        iconParams.bottomMargin = (int) (20 * getResources().getDisplayMetrics().density);
-        splashIcon.setLayoutParams(iconParams);
-        splashContent.addView(splashIcon);
-
-        // App Title
-        TextView splashTitle = new TextView(this);
-        splashTitle.setText(R.string.app_name);
-        splashTitle.setTextColor(0xFFF8FAFC);
-        splashTitle.setTextSize(22);
-        splashTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        splashTitle.setGravity(Gravity.CENTER);
-        splashContent.addView(splashTitle);
-
-        // App Subtitle
-        TextView splashSubtitle = new TextView(this);
-        splashSubtitle.setText("Ultimate Entertainment & High-Speed Browser");
-        splashSubtitle.setTextColor(0xFF94A3B8);
-        splashSubtitle.setTextSize(13);
-        splashSubtitle.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams subParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        subParams.topMargin = (int) (6 * getResources().getDisplayMetrics().density);
-        splashSubtitle.setLayoutParams(subParams);
-        splashContent.addView(splashSubtitle);
-
-        // Spinner Loader
-        ProgressBar splashSpinner = new ProgressBar(this);
-        LinearLayout.LayoutParams spinnerParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        spinnerParams.topMargin = (int) (28 * getResources().getDisplayMetrics().density);
-        splashSpinner.setLayoutParams(spinnerParams);
-        splashContent.addView(splashSpinner);
-
-        splashOverlay.addView(splashContent);
         rootLayout.addView(splashOverlay);
         splashOverlay.bringToFront();
 
-        // Dismiss splash after 2.0s
+        // Dismiss splash after 2.5s with smooth fade
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             if (splashOverlay != null && splashOverlay.getVisibility() == View.VISIBLE) {
                 splashOverlay.animate()
@@ -393,7 +349,7 @@ public class MainActivity extends AppCompatActivity {
                             }
                         });
             }
-        }, 2000);
+        }, 2500);
     }
 
     /**

@@ -1471,6 +1471,7 @@
     <!-- 1. Header -->
     <header>
       <button class="close-btn" onclick="closeSection()" title="Close and return to blog">✕</button>
+      <img src="file:///android_res/drawable/ic_launcher.png" onerror="this.src='/logo.png'" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="Logo">
       <form class="search-capsule" onsubmit="event.preventDefault(); submitSearch();">
         <svg class="search-icon" viewBox="0 0 24 24">
           <circle cx="11" cy="11" r="8"></circle>
@@ -1502,12 +1503,10 @@
 
     <!-- 3. Main Content -->
     <div class="main-content">
-      <!-- Section Heading: Red Film Strip Icon + "Unlimited Movie" -->
+      <!-- Section Heading: Logo + "Unlimited Movie" -->
       <div class="section-heading">
         <div class="heading-left">
-          <svg class="film-strip-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
-          </svg>
+          <img src="file:///android_res/drawable/ic_launcher.png" onerror="this.src='/logo.png'" style="width: 22px; height: 22px; border-radius: 50%; object-fit: cover; flex-shrink: 0;" alt="Logo">
           <span class="heading-text">Unlimited Movie</span>
         </div>
         <span class="movie-count-badge" id="movieCountBadge">Loading...</span>

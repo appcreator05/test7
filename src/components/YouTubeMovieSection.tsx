@@ -1061,16 +1061,23 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
     >
       {/* Top Application Header (Clean Full-Width Live Search) */}
       <header className="h-14 sm:h-16 bg-[#0f0f0f] border-b border-[#272727] flex items-center gap-2 sm:gap-4 px-3 sm:px-6 shrink-0 z-30 shadow-md">
-        {/* Left: Close / Back to App Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#222222] hover:bg-[#333333] active:scale-95 text-slate-200 hover:text-white rounded-full text-xs sm:text-sm font-semibold border border-[#383838] transition-all cursor-pointer shrink-0 shadow-xs"
-          title="Back to Movie WebView App"
-        >
-          <X className="w-4 h-4 text-red-500" />
-          <span className="hidden sm:inline">Close</span>
-        </button>
+        {/* Left: Close / Back to App Button + App Logo */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#222222] hover:bg-[#333333] active:scale-95 text-slate-200 hover:text-white rounded-full text-xs sm:text-sm font-semibold border border-[#383838] transition-all cursor-pointer shrink-0 shadow-xs"
+            title="Back to Movie WebView App"
+          >
+            <X className="w-4 h-4 text-red-500" />
+            <span className="hidden sm:inline">Close</span>
+          </button>
+          <img
+            src="/logo.png"
+            alt="App Logo"
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 shadow-sm"
+          />
+        </div>
 
         {/* Center/Full-Width: Large Live Search Bar */}
         <form
@@ -1697,8 +1704,8 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
             {/* Header info row */}
             <div className="flex items-center justify-between border-b border-[#272727] pb-3">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                  <Film className="w-5 h-5 text-red-500" />
+                <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+                  <img src="/logo.png" alt="Logo" className="w-5 h-5 rounded-full object-cover shrink-0 shadow-sm" />
                   <span>Unlimited Movie</span>
                 </h2>
               </div>
