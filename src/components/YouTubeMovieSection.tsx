@@ -1060,31 +1060,24 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
       className="fixed inset-0 z-[100000] bg-[#0f0f0f] text-slate-100 flex flex-col overflow-hidden select-none animate-in fade-in zoom-in-95 duration-200"
     >
       {/* Top Application Header (Clean Full-Width Live Search) */}
-      <header className="h-14 sm:h-16 bg-[#0f0f0f] border-b border-[#272727] flex items-center gap-2 sm:gap-4 px-3 sm:px-6 shrink-0 z-30 shadow-md">
-        {/* Left: Close / Back to App Button + App Logo */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#222222] hover:bg-[#333333] active:scale-95 text-slate-200 hover:text-white rounded-full text-xs sm:text-sm font-semibold border border-[#383838] transition-all cursor-pointer shrink-0 shadow-xs"
-            title="Back to Movie WebView App"
-          >
-            <X className="w-4 h-4 text-red-500" />
-            <span className="hidden sm:inline">Close</span>
-          </button>
-          <img
-            src="/logo.png"
-            alt="App Logo"
-            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover shrink-0 shadow-sm"
-          />
-        </div>
+      <header className="h-14 sm:h-16 bg-[#0f0f0f] border-b border-[#272727] flex items-center gap-2 sm:gap-4 px-2 sm:px-6 shrink-0 z-30 shadow-md w-full max-w-full overflow-hidden">
+        {/* Left: Close / Back to App Button (Logo removed as requested) */}
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#222222] hover:bg-[#333333] active:scale-95 text-slate-200 hover:text-white rounded-full text-xs sm:text-sm font-semibold border border-[#383838] transition-all cursor-pointer shrink-0 shadow-xs"
+          title="Back to Movie WebView App"
+        >
+          <X className="w-4 h-4 text-red-500" />
+          <span className="hidden sm:inline">Close</span>
+        </button>
 
         {/* Center/Full-Width: Large Live Search Bar */}
         <form
           onSubmit={handleSearchSubmit}
-          className="flex-1 w-full relative flex items-center"
+          className="flex-1 min-w-0 w-full relative flex items-center"
         >
-          <div className={`w-full h-10 sm:h-11 flex items-center bg-[#141414] hover:bg-[#181818] border transition-all rounded-full overflow-hidden shadow-inner pl-3.5 pr-1.5 ${
+          <div className={`w-full min-w-0 h-10 sm:h-11 flex items-center bg-[#141414] hover:bg-[#181818] border transition-all rounded-full overflow-hidden shadow-inner pl-2.5 sm:pl-3.5 pr-1 sm:pr-1.5 ${
             isListening
               ? 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)] bg-[#181212]'
               : 'border-[#303030] focus-within:border-red-500 focus-within:bg-[#161616] focus-within:shadow-[0_0_15px_rgba(239,68,68,0.2)]'
@@ -1319,69 +1312,34 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
 
                 {/* UNTOUCH SHIELD 1: TOP-LEFT AREA (Channel Avatar, Video Title, Channel Name, Speaker Icon - Leaving CC & Gear open) */}
                 <div
-                  className="absolute top-0 left-0 w-[calc(100%-96px)] h-12 sm:h-14 z-20 pointer-events-auto cursor-default select-none bg-transparent"
-                  title="Protected Top Left Area"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                  }}
+                  className="absolute top-0 left-0 w-[calc(100%-96px)] h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                  title="Video Player Tap Area"
+                  onClick={handleScreenTap}
+                  onTouchStart={handleScreenTap}
                 />
 
                 {/* UNTOUCH SHIELD 2: BOTTOM AREA (Share/Link Icon, Recommendations Card, YouTube Logo) */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 h-12 sm:h-14 z-20 pointer-events-auto cursor-default select-none bg-transparent"
-                  title="Protected Bottom Area"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                  }}
+                  className="absolute bottom-0 left-0 right-0 h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                  title="Video Player Tap Area"
+                  onClick={handleScreenTap}
+                  onTouchStart={handleScreenTap}
                 />
 
-                {/* Floating button to restore bottom controls if hidden */}
-                {!showControls && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      resetControlsTimer();
-                    }}
-                    className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 px-3.5 py-1.5 bg-black/85 hover:bg-black text-white/90 hover:text-white border border-white/20 rounded-full text-xs font-bold shadow-2xl backdrop-blur-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                    title="Show Player Controls & Timeline"
-                  >
-                    <Sliders className="w-3.5 h-3.5 text-red-500" />
-                    <span>Controls</span>
-                  </button>
-                )}
+                {/* FULL SCREEN TAP INTERCEPTOR: Touching video player immediately brings up the controls layout! */}
+                <div
+                  id="player-screen-tap-overlay"
+                  className={`absolute inset-0 z-20 cursor-pointer select-none bg-transparent ${
+                    showControls ? 'bottom-20 sm:bottom-24' : 'bottom-0'
+                  }`}
+                  style={{
+                    clipPath: 'polygon(0 0, calc(100% - 96px) 0, calc(100% - 96px) 48px, 100% 48px, 100% 100%, 0 100%)',
+                    WebkitClipPath: 'polygon(0 0, calc(100% - 96px) 0, calc(100% - 96px) 48px, 100% 48px, 100% 100%, 0 100%)',
+                  }}
+                  onClick={handleScreenTap}
+                  onTouchStart={handleScreenTap}
+                  title="Tap to toggle controls"
+                />
 
                 {/* SLIDE-UP BOTTOM CONTROL LAYOUT: Play/Pause, Auto Next, and Landscape Fullscreen button */}
                 <div
