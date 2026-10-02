@@ -1,0 +1,121 @@
+name: Build Android APK (Ad-Free Browser)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          build-root-directory: android
+          cache-read-only: false
+
+      - name: Prepare Gradlew Permissions & Fix Line Endings
+        run: |
+          sed -i 's/\r$//' android/gradlew
+          chmod +x android/gradlew
+
+      - name: Setup Custom Keystore if provided in Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Custom Keystore found in GitHub Secrets. Decoding to android/app/release.keystore..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          else
+            echo "No custom keystore secret found. Defaulting to standard signing."
+          fi
+
+      - name: Ensure Android Platform SDK 36 is Installed
+        run: |
+          echo "Checking and installing Android Platform SDK 36..."
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" || true
+
+      - name: Build Android Release APK (Real Ads Mode)
+        working-directory: android
+        env:
+          KEYSTORE_FILE: "release.keystore"
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Prepare APK for Easy Download
+        run: |
+          mkdir -p release-apk
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk release-apk/MovieApp-v160-b210.apk
+          elif [ -f android/app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp android/app/build/outputs/apk/debug/app-debug.apk release-apk/MovieApp-v160-b210.apk
+          else
+            find android/app/build/outputs/apk -type f -name "*.apk" -exec cp {} release-apk/MovieApp-v160-b210.apk \;
+          fi
+          echo "Found generated APK:"
+          ls -lh release-apk/
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: MovieApp-v160-b210-APK
+          path: release-apk/MovieApp-v160-b210.apk
+          retention-days: 1
+
+      - name: Publish Direct APK Download in GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        continue-on-error: true
+        with:
+          tag_name: v160-build${{ github.run_number }}
+          name: "Movie App Android APK v160 (Build #${{ github.run_number }})"
+          body: |
+            ### 🎬 Movie App Official Android APK (100% Ad-Free & High-Performance)
+            - **App Name:** Movie App
+            - **Package Name:** `com.sayantika.eara`
+            - **Version Name:** `160` | **Version Code:** `210`
+            - **Target SDK:** `36` (Android 16 Baklava)
+            - **Build Number:** `${{ github.run_number }}`
+            - **Ads Status:** 100% Ad-Free (Zero SDK Ads, Zero Popups, Zero Interstitials)
+            - **Browser Features:** Third-Party Cookies, Full JavaScript & V8 Optimization, Multi-Window Popups & Redirects, Sound & Media Autoplay, Protected Content (DRM/Widevine/EME), Auto-Verify (Client Certs & HTTP Auth), On-Device Site Data (LocalStorage, IndexedDB, WebSQL), Automatic DownloadManager Integration, Data Store Sync, Embedded Content & Iframes Support
+            
+            👇 **Download directly from Assets below:**
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: release-apk/MovieApp-v160-b210.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Direct Download Link in Summary
+        if: always()
+        run: |
+          echo "### 🚀 APK Download Options" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **GitHub Releases (Permanent):** Download from the [Releases tab](../../releases)." >> $GITHUB_STEP_SUMMARY
+          if [ -f release-apk/MovieApp-v160-b210.apk ]; then
+            DIRECT_URL=$(curl -sF "file=@release-apk/MovieApp-v160-b210.apk" https://temp.sh/upload || true)
+            if [ -n "$DIRECT_URL" ]; then
+              echo "- **Direct 1-Click Fast Download Link:** [$DIRECT_URL]($DIRECT_URL)" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
