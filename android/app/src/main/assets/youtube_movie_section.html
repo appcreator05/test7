@@ -686,6 +686,20 @@
     .mini-restore-controls-btn {
       display: none !important;
     }
+
+    .ytSpecBottomSheetLayoutContainer {
+      border-radius: 12px;
+      background-color: #fff;
+      display: block;
+      overflow: hidden;
+      position: fixed;
+      margin: 0 8px 90px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+    }
+
     .video-bottom-controls {
       position: absolute;
       bottom: 0;
@@ -2308,16 +2322,29 @@
     function enableGearInteraction() {
       const overlay = document.getElementById('screenTapOverlay');
       const untouchTop = document.getElementById('untouchTopLeft');
+      const untouchBottom = document.getElementById('untouchBottom');
+      const controls = document.getElementById('videoBottomControls');
+      const box = document.getElementById('cinemaFrameBox');
+
+      // 1. Immediately hide our controls bar so it NEVER covers YouTube's bottom sheet!
+      if (controls) controls.classList.add('is-hidden');
+      if (box) box.classList.add('controls-hidden');
+      if (controlsTimer) clearTimeout(controlsTimer);
+
+      // 2. Disable all shields & overlays so touches on YouTube's Quality bottom sheet work unimpeded!
       if (overlay) overlay.style.pointerEvents = 'none';
       if (untouchTop) untouchTop.style.pointerEvents = 'none';
-      showGearHideButton(true);
+      if (untouchBottom) untouchBottom.style.pointerEvents = 'none';
+
+      window.isGearInteractingActive = true;
 
       if (window.gearInteractionTimeout) clearTimeout(window.gearInteractionTimeout);
       window.gearInteractionTimeout = setTimeout(() => {
+        window.isGearInteractingActive = false;
         if (overlay) overlay.style.pointerEvents = 'auto';
         if (untouchTop) untouchTop.style.pointerEvents = 'auto';
-        showGearHideButton(false);
-      }, 12000);
+        if (untouchBottom) untouchBottom.style.pointerEvents = 'auto';
+      }, 15000);
     }
 
     function handleScreenTap(e) {
@@ -2335,6 +2362,18 @@
             return; // Let YouTube native gear settings open!
           }
         }
+      }
+
+      if (window.isGearInteractingActive) {
+        window.isGearInteractingActive = false;
+        const overlay = document.getElementById('screenTapOverlay');
+        const untouchTop = document.getElementById('untouchTopLeft');
+        const untouchBottom = document.getElementById('untouchBottom');
+        if (overlay) overlay.style.pointerEvents = 'auto';
+        if (untouchTop) untouchTop.style.pointerEvents = 'auto';
+        if (untouchBottom) untouchBottom.style.pointerEvents = 'auto';
+        resetControlsTimer();
+        return;
       }
 
       if (e) {
@@ -2383,7 +2422,9 @@
     let lastStagePointer = { x: 0, y: 0, width: 0, height: 0 };
 
     function handleStagePointerMove(e) {
-      resetControlsTimer();
+      if (!window.isGearInteractingActive) {
+        resetControlsTimer();
+      }
       const stage = document.getElementById('cinemaStage');
       if (!stage) return;
       const rect = stage.getBoundingClientRect();
@@ -2402,8 +2443,8 @@
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       lastStagePointer = { x, y, width: rect.width, height: rect.height };
-      if (x >= rect.width - 140 && y <= 65) {
-        showGearHideButton(true);
+      if (x >= rect.width - 160 && y <= 75) {
+        enableGearInteraction();
       }
     }
 
@@ -2416,20 +2457,19 @@
       const x = touch.clientX - rect.left;
       const y = touch.clientY - rect.top;
       lastStagePointer = { x, y, width: rect.width, height: rect.height };
-      if (x >= rect.width - 140 && y <= 65) {
-        showGearHideButton(true);
+      if (x >= rect.width - 160 && y <= 75) {
+        enableGearInteraction();
       }
     }
 
     function showGearHideButton(show) {
       const btn = document.getElementById('gearHideControlsBtn');
       if (btn) btn.style.display = show ? 'inline-flex' : 'none';
-      if (show) resetControlsTimer();
     }
 
     window.addEventListener('blur', function() {
-      if (lastStagePointer.width > 0 && lastStagePointer.x >= lastStagePointer.width - 140 && lastStagePointer.y <= 65) {
-        showGearHideButton(true);
+      if (lastStagePointer.width > 0 && lastStagePointer.x >= lastStagePointer.width - 160 && lastStagePointer.y <= 75) {
+        enableGearInteraction();
       }
     });
 

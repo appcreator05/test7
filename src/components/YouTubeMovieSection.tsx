@@ -446,8 +446,9 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
     const handleWindowBlur = () => {
       const pos = lastPointerPosRef.current;
       if (pos.width > 0 && pos.x >= pos.width - 160 && pos.y <= 75) {
-        setShowGearHideBtn(true);
         setIsGearInteracting(true);
+        setShowControls(false);
+        if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
       }
     };
     window.addEventListener('blur', handleWindowBlur);
@@ -510,15 +511,22 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
         // If clicked in the top-right Gear / Settings zone (width 160px, height 75px):
         if (relX >= rect.width - 160 && relY <= 75) {
           setIsGearInteracting(true);
-          setShowGearHideBtn(true);
+          setShowControls(false);
+          if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
           if (gearTimeoutRef.current) clearTimeout(gearTimeoutRef.current);
           gearTimeoutRef.current = setTimeout(() => {
             setIsGearInteracting(false);
-          }, 12000);
+          }, 15000);
           return; // Let YouTube receive the click on its gear icon!
         }
       }
       e.stopPropagation();
+    }
+    if (isGearInteracting) {
+      setIsGearInteracting(false);
+      setShowControls(true);
+      resetControlsTimer();
+      return;
     }
     if (showControls) {
       setShowControls(false);
@@ -1309,7 +1317,9 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                 <div
                   className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center"
                   onMouseMove={(e) => {
-                    resetControlsTimer();
+                    if (!isGearInteracting) {
+                      resetControlsTimer();
+                    }
                     const rect = e.currentTarget.getBoundingClientRect();
                     lastPointerPosRef.current = {
                       x: e.clientX - rect.left,
@@ -1328,9 +1338,10 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                       width: rect.width,
                       height: rect.height,
                     };
-                    if (x >= rect.width - 140 && y <= 65) {
-                      setShowGearHideBtn(true);
-                      setShowControls(true);
+                    if (x >= rect.width - 160 && y <= 75) {
+                      setIsGearInteracting(true);
+                      setShowControls(false);
+                      if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
                     }
                   }}
                   onTouchStartCapture={(e) => {
@@ -1345,9 +1356,10 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
                         width: rect.width,
                         height: rect.height,
                       };
-                      if (x >= rect.width - 140 && y <= 65) {
-                        setShowGearHideBtn(true);
-                        setShowControls(true);
+                      if (x >= rect.width - 160 && y <= 75) {
+                        setIsGearInteracting(true);
+                        setShowControls(false);
+                        if (controlsTimerRef.current) clearTimeout(controlsTimerRef.current);
                       }
                     }
                   }}
@@ -1373,7 +1385,9 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
 
                 {/* UNTOUCH SHIELD 1: TOP-LEFT AREA (Channel Avatar, Video Title, Channel Name, Speaker Icon - Leaving Gear & Settings open) */}
                 <div
-                  className="absolute top-0 left-0 w-[calc(100%-160px)] h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                  className={`absolute top-0 left-0 w-[calc(100%-160px)] h-12 sm:h-14 z-20 ${
+                    isGearInteracting ? 'pointer-events-none' : 'pointer-events-auto'
+                  } cursor-pointer select-none bg-transparent`}
                   title="Video Player Tap Area"
                   onClick={handleScreenTap}
                   onTouchStart={handleScreenTap}
@@ -1381,7 +1395,9 @@ export const YouTubeMovieSection: React.FC<YouTubeMovieSectionProps> = ({
 
                 {/* UNTOUCH SHIELD 2: BOTTOM AREA (Share/Link Icon, Recommendations Card, YouTube Logo) */}
                 <div
-                  className="absolute bottom-0 left-0 right-0 h-12 sm:h-14 z-20 pointer-events-auto cursor-pointer select-none bg-transparent"
+                  className={`absolute bottom-0 left-0 right-0 h-12 sm:h-14 z-20 ${
+                    isGearInteracting ? 'pointer-events-none' : 'pointer-events-auto'
+                  } cursor-pointer select-none bg-transparent`}
                   title="Video Player Tap Area"
                   onClick={handleScreenTap}
                   onTouchStart={handleScreenTap}
